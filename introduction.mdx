@@ -1,0 +1,78 @@
+---
+title: "Introduction"
+description: "A Java implementation of the Observer design pattern for order event notification in an e-commerce system"
+---
+
+## Overview
+
+Patron Observer Java demonstrates a clean implementation of the Observer design pattern in Java, specifically designed for handling order events in an e-commerce system. This project showcases how to decouple event notification logic from business logic, enabling extensible and maintainable event-driven architectures.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with the Observer pattern in minutes
+  </Card>
+  <Card title="Design Pattern" icon="diagram-project" href="/pattern/overview">
+    Learn about the Observer pattern architecture
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/order-subject">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="/examples/basic-usage">
+    View practical usage examples
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Decoupled Architecture" icon="layer-group">
+    Clean separation between business logic and event notification
+  </Card>
+  <Card title="Multiple Observers" icon="users">
+    Support for email, logging, and statistics observers out of the box
+  </Card>
+  <Card title="Extensible Design" icon="plug">
+    Easy to add custom observers without modifying existing code
+  </Card>
+  <Card title="Type-Safe Events" icon="shield-check">
+    Strongly-typed interfaces ensure reliable event handling
+  </Card>
+</CardGroup>
+
+## How It Works
+
+The Observer pattern allows objects (observers) to watch and react to events from another object (subject). When an order is shipped, the system automatically notifies all registered observers:
+
+1. **Email Observer** - Sends confirmation emails to customers
+2. **Log Observer** - Records audit trail entries
+3. **Stats Observer** - Updates shipment metrics
+
+<Info>
+The core principle is that `OrderService` doesn't need to know about email, logging, or statistics — it simply notifies the subject when an order ships, and all registered observers react automatically.
+</Info>
+
+## Use Cases
+
+This pattern is ideal for:
+
+- **Event-driven systems** where multiple actions must occur in response to a single event
+- **Plugin architectures** where functionality needs to be extended without modifying core code
+- **Audit systems** where multiple subsystems need to track state changes
+- **Notification systems** where various channels (email, SMS, push) react to events
+
+## Next Steps
+
+<Steps>
+  <Step title="Get Started">
+    Follow the [quickstart guide](/quickstart) to see the pattern in action
+  </Step>
+  <Step title="Understand the Pattern">
+    Read about the [architecture](/pattern/architecture) and [components](/pattern/components)
+  </Step>
+  <Step title="Explore the API">
+    Review the [API reference](/api/order-subject) to understand each interface and class
+  </Step>
+  <Step title="Build Custom Observers">
+    Create your own observers using the [examples](/examples/custom-observers)
+  </Step>
+</Steps>

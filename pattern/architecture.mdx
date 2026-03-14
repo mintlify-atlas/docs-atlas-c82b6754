@@ -1,0 +1,223 @@
+---
+title: "Architecture"
+description: "Understanding the Observer pattern architecture in the order system"
+---
+
+## System Architecture
+
+The Observer pattern architecture in this e-commerce system follows a clear separation of concerns with three main layers:
+
+<Steps>
+  <Step title="Business Logic Layer">
+    The `OrderService` handles order management and triggers events when orders are shipped.
+  </Step>
+  
+  <Step title="Event Management Layer">
+    The `OrderEventPublisher` (Subject) manages observer registration and notification.
+  </Step>
+  
+  <Step title="Reaction Layer">
+    Multiple observers (`EmailOrderObserver`, `LogOrderObserver`, `StatsOrderObserver`) react to order shipment events.
+  </Step>
+</Steps>
+
+## Subject-Observer Relationship
+
+The core of the Observer pattern is the relationship between the Subject and its Observers:
+
+### The Subject Interface
+
+The `OrderSubject` interface (OrderSubject.java:5-9) defines the contract for managing observers:
+
+```java
+public interface OrderSubject {
+    void addObserver(OrderObserver observer);
+    void removeObserver(OrderObserver observer);
+    void notifyOrderShipped(Order order);
+}
+```
+
+<Info>
+This interface provides three essential operations: **subscribe**, **unsubscribe**, and **notify**.
+</Info>
+
+### The Observer Interface
+
+The `OrderObserver` interface (OrderObserver.java:4-6) defines how observers receive notifications:
+
+```java
+public interface OrderObserver {
+    void onOrderShipped(Order order);
+}
+```
+
+<Note>
+Each observer implements this single method to define its specific reaction to the order shipment event.
+</Note>
+
+## Concrete Implementation
+
+### OrderEventPublisher (Concrete Subject)
+
+The `OrderEventPublisher` class (OrderEventPublisher.java:6-26) implements the `OrderSubject` interface and manages the observer list:
+
+```java
+public class OrderEventPublisher implements OrderSubject {
+    private final List<OrderObserver> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(OrderObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(OrderObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyOrderShipped(Order order) {
+        for (OrderObserver observer : observers) {
+            observer.onOrderShipped(order);
+        }
+    }
+}
+```
+
+<Tip>
+The `notifyOrderShipped` method iterates through all registered observers and calls their `onOrderShipped` method.
+</Tip>
+
+## Event Flow
+
+Here's how the system processes an order shipment event:
+
+### 1. Order Creation
+
+An `Order` object is created with an initial status:
+
+```java
+Order order = new Order("ORD-001");
+// Status is automatically set to "CREADO"
+```
+
+### 2. Service Method Invocation
+
+The `OrderService.shipOrder()` method (OrderService.java:11-19) is called:
+
+```java
+public void shipOrder(Order order) {
+    // Business logic: update order status
+    order.setStatus("ENVIADO");
+    System.out.println("OrderService: Pedido " + order.getId() + " marcado como ENVIADO.");
+    
+    // Trigger notification to all observers
+    orderSubject.notifyOrderShipped(order);
+}
+```
+
+<Info>
+The `OrderService` updates the order status and then delegates notification to the subject.
+</Info>
+
+### 3. Subject Notifies Observers
+
+The `OrderEventPublisher.notifyOrderShipped()` method loops through all registered observers:
+
+```java
+for (OrderObserver observer : observers) {
+    observer.onOrderShipped(order);
+}
+```
+
+### 4. Observers React
+
+Each observer executes its specific logic:
+
+**EmailOrderObserver** (EmailOrderObserver.java:6-8):
+```java
+System.out.println("[EMAIL] Pedido " + order.getId() + " enviado. Mandando email al cliente.");
+```
+
+**LogOrderObserver** (LogOrderObserver.java:6-8):
+```java
+System.out.println("[LOG] Pedido " + order.getId() + " ha cambiado a estado: " + order.getStatus());
+```
+
+**StatsOrderObserver** (StatsOrderObserver.java:8-11):
+```java
+totalEnviados++;
+System.out.println("[STATS] Contador de pedidos enviados: " + totalEnviados);
+```
+
+## Component Interaction
+
+The following diagram illustrates how components interact:
+
+```
+┌─────────────────┐
+│   AppMain       │  1. Creates and wires everything
+└────────┬────────┘
+         │
+         ├──> Creates OrderEventPublisher (Subject)
+         ├──> Creates Observers (Email, Log, Stats)
+         ├──> Subscribes observers to subject
+         └──> Creates OrderService with subject
+
+┌─────────────────┐
+│  OrderService   │  2. shipOrder() called
+└────────┬────────┘
+         │
+         ├──> Updates Order status to "ENVIADO"
+         └──> Calls orderSubject.notifyOrderShipped(order)
+
+┌──────────────────────┐
+│ OrderEventPublisher  │  3. Notifies all observers
+└──────────┬───────────┘
+           │
+           ├──> emailObserver.onOrderShipped(order)
+           ├──> logObserver.onOrderShipped(order)
+           └──> statsObserver.onOrderShipped(order)
+
+┌────────────────────────────────────────────┐
+│  Observers execute their specific logic    │  4. React to event
+└────────────────────────────────────────────┘
+```
+
+## Dependency Injection
+
+The `OrderService` receives the `OrderSubject` through constructor injection (OrderService.java:7-9):
+
+```java
+public class OrderService {
+    private final OrderSubject orderSubject;
+
+    public OrderService(OrderSubject orderSubject) {
+        this.orderSubject = orderSubject;
+    }
+}
+```
+
+<Note>
+This design principle ensures that `OrderService` depends on abstractions (the `OrderSubject` interface) rather than concrete implementations, following the **Dependency Inversion Principle**.
+</Note>
+
+## Benefits of This Architecture
+
+<CardGroup cols={2}>
+  <Card title="Separation of Concerns" icon="layer-group">
+    Business logic (`OrderService`) is separate from event handling (`OrderEventPublisher`) and reactions (observers).
+  </Card>
+  
+  <Card title="Testability" icon="flask">
+    Each component can be tested in isolation. Mock observers can be used to test the subject, and vice versa.
+  </Card>
+  
+  <Card title="Scalability" icon="arrow-up-right-dots">
+    New observers can be added without touching existing code. The system scales horizontally.
+  </Card>
+  
+  <Card title="Runtime Flexibility" icon="gear">
+    Observers can be added or removed at runtime, allowing dynamic behavior changes.
+  </Card>
+</CardGroup>

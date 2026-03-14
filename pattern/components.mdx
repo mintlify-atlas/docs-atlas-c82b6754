@@ -1,0 +1,378 @@
+---
+title: "Components"
+description: "Detailed overview of all components in the Observer pattern implementation"
+---
+
+## Component Overview
+
+The Observer pattern implementation consists of several key components that work together to create a flexible, decoupled event notification system.
+
+<CardGroup cols={2}>
+  <Card title="OrderSubject" icon="tower-broadcast" href="#ordersubject">
+    Subject interface defining observer management operations
+  </Card>
+  
+  <Card title="OrderObserver" icon="eye" href="#orderobserver">
+    Observer interface defining the notification contract
+  </Card>
+  
+  <Card title="OrderEventPublisher" icon="satellite-dish" href="#ordereventpublisher">
+    Concrete Subject managing and notifying observers
+  </Card>
+  
+  <Card title="Observer Implementations" icon="list" href="#concrete-observers">
+    Email, Log, and Stats observers that react to events
+  </Card>
+  
+  <Card title="OrderService" icon="briefcase" href="#orderservice">
+    Business service that triggers order shipment events
+  </Card>
+  
+  <Card title="Order" icon="box" href="#order">
+    Domain model representing an e-commerce order
+  </Card>
+</CardGroup>
+
+---
+
+## OrderSubject
+
+**Type**: Interface  
+**File**: OrderSubject.java  
+**Role**: Subject abstraction in the Observer pattern
+
+### Description
+
+The `OrderSubject` interface defines the contract for managing observers and notifying them of order shipment events.
+
+```java
+public interface OrderSubject {
+    void addObserver(OrderObserver observer);
+    void removeObserver(OrderObserver observer);
+    void notifyOrderShipped(Order order);
+}
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `addObserver(OrderObserver)` | Subscribes an observer to receive notifications |
+| `removeObserver(OrderObserver)` | Unsubscribes an observer from notifications |
+| `notifyOrderShipped(Order)` | Notifies all registered observers about an order shipment |
+
+<Info>
+This interface allows the system to work with any implementation of the Subject, following the **Dependency Inversion Principle**.
+</Info>
+
+---
+
+## OrderObserver
+
+**Type**: Interface  
+**File**: OrderObserver.java  
+**Role**: Observer abstraction in the Observer pattern
+
+### Description
+
+The `OrderObserver` interface defines the contract that all observers must implement to receive order shipment notifications.
+
+```java
+public interface OrderObserver {
+    void onOrderShipped(Order order);
+}
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `onOrderShipped(Order)` | Called when an order has been shipped, receives the Order object as context |
+
+<Note>
+The single method design follows the **Interface Segregation Principle** - observers only need to implement what they use.
+</Note>
+
+---
+
+## OrderEventPublisher
+
+**Type**: Concrete Class (implements `OrderSubject`)  
+**File**: OrderEventPublisher.java  
+**Role**: Concrete Subject that manages the observer list
+
+### Description
+
+The `OrderEventPublisher` is the concrete implementation of the Subject pattern. It maintains a list of observers and notifies them when order shipment events occur.
+
+```java
+public class OrderEventPublisher implements OrderSubject {
+    private final List<OrderObserver> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(OrderObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(OrderObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyOrderShipped(Order order) {
+        for (OrderObserver observer : observers) {
+            observer.onOrderShipped(order);
+        }
+    }
+}
+```
+
+### Key Features
+
+- **Observer Registry**: Maintains a `List<OrderObserver>` to store all subscribed observers
+- **Dynamic Subscription**: Observers can be added or removed at any time
+- **Notification Loop**: Iterates through all observers and calls their `onOrderShipped` method
+
+<Tip>
+The publisher uses a simple ArrayList, but in production you might consider thread-safe collections like `CopyOnWriteArrayList` for concurrent environments.
+</Tip>
+
+---
+
+## Concrete Observers
+
+Three concrete observer implementations handle different responsibilities when an order is shipped.
+
+### EmailOrderObserver
+
+**File**: EmailOrderObserver.java  
+**Responsibility**: Send email notifications to customers
+
+```java
+public class EmailOrderObserver implements OrderObserver {
+    @Override
+    public void onOrderShipped(Order order) {
+        System.out.println("[EMAIL] Pedido " + order.getId() + 
+                          " enviado. Mandando email al cliente.");
+    }
+}
+```
+
+**Purpose**: Simulates sending an email with tracking information when an order ships.
+
+<Note>
+In a production system, this would integrate with an email service like SendGrid, AWS SES, or SMTP.
+</Note>
+
+### LogOrderObserver
+
+**File**: LogOrderObserver.java  
+**Responsibility**: Record audit logs for order status changes
+
+```java
+public class LogOrderObserver implements OrderObserver {
+    @Override
+    public void onOrderShipped(Order order) {
+        System.out.println("[LOG] Pedido " + order.getId() + 
+                          " ha cambiado a estado: " + order.getStatus());
+    }
+}
+```
+
+**Purpose**: Creates an audit trail by logging order status changes.
+
+<Note>
+In a production system, this would write to a logging framework (Log4j, SLF4J) or a database for audit compliance.
+</Note>
+
+### StatsOrderObserver
+
+**File**: StatsOrderObserver.java  
+**Responsibility**: Track statistics about shipped orders
+
+```java
+public class StatsOrderObserver implements OrderObserver {
+    private int totalEnviados = 0;
+
+    @Override
+    public void onOrderShipped(Order order) {
+        totalEnviados++;
+        System.out.println("[STATS] Contador de pedidos enviados: " + totalEnviados);
+    }
+}
+```
+
+**Purpose**: Maintains a counter of total orders shipped.
+
+<Tip>
+This observer maintains state (`totalEnviados`). In a production system, this would update a metrics service, database, or analytics platform.
+</Tip>
+
+---
+
+## OrderService
+
+**Type**: Service Class  
+**File**: OrderService.java  
+**Role**: Business logic layer that triggers events
+
+### Description
+
+The `OrderService` handles order management operations. It uses dependency injection to receive an `OrderSubject` and triggers notifications when business logic dictates.
+
+```java
+public class OrderService {
+    private final OrderSubject orderSubject;
+
+    public OrderService(OrderSubject orderSubject) {
+        this.orderSubject = orderSubject;
+    }
+
+    public void shipOrder(Order order) {
+        // Business logic
+        order.setStatus("ENVIADO");
+        System.out.println("OrderService: Pedido " + order.getId() + 
+                          " marcado como ENVIADO.");
+        
+        // Trigger observers
+        orderSubject.notifyOrderShipped(order);
+    }
+}
+```
+
+### Key Characteristics
+
+- **Dependency Injection**: Receives `OrderSubject` via constructor
+- **Single Responsibility**: Focuses on order management, delegates notifications to the subject
+- **Decoupled**: Doesn't know about concrete observers or their implementations
+
+<Info>
+The `OrderService` depends on the `OrderSubject` interface, not the concrete `OrderEventPublisher`. This allows for easy testing with mock subjects.
+</Info>
+
+---
+
+## Order
+
+**Type**: Domain Model  
+**File**: Order.java  
+**Role**: Data model representing an e-commerce order
+
+### Description
+
+The `Order` class is a simple domain model using Lombok annotations for getters and setters.
+
+```java
+@Getter
+@Setter
+public class Order {
+    private String id;
+    private String status; // "CREADO", "ENVIADO", etc.
+
+    public Order(String id) {
+        this.id = id;
+        this.status = "CREADO";
+    }
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | String | Unique order identifier |
+| `status` | String | Current order status ("CREADO", "ENVIADO", etc.) |
+
+### Lifecycle
+
+1. **Created**: Order is instantiated with status "CREADO"
+2. **Shipped**: Status changes to "ENVIADO" when `OrderService.shipOrder()` is called
+3. **Notified**: Order object is passed to all observers for their processing
+
+<Note>
+The Order object serves as the **event context** - it contains all the information observers need to perform their actions.
+</Note>
+
+---
+
+## How Components Work Together
+
+Here's a step-by-step flow showing how all components interact:
+
+<Steps>
+  <Step title="Initialization (AppMain)">
+    - Create `OrderEventPublisher` (Subject)
+    - Create observer instances: `EmailOrderObserver`, `LogOrderObserver`, `StatsOrderObserver`
+    - Subscribe all observers to the publisher using `addObserver()`
+    - Create `OrderService` with the publisher injected
+  </Step>
+  
+  <Step title="Order Creation">
+    - Create an `Order` instance with an ID
+    - Initial status is automatically set to "CREADO"
+  </Step>
+  
+  <Step title="Order Shipment">
+    - Call `orderService.shipOrder(order)`
+    - `OrderService` updates order status to "ENVIADO"
+    - `OrderService` calls `orderSubject.notifyOrderShipped(order)`
+  </Step>
+  
+  <Step title="Observer Notification">
+    - `OrderEventPublisher` loops through its observer list
+    - Each observer's `onOrderShipped(order)` method is called
+    - Observers execute their specific logic in sequence
+  </Step>
+</Steps>
+
+## Extension Points
+
+The architecture makes it easy to extend functionality:
+
+### Adding New Observers
+
+To add a new observer (e.g., push notifications):
+
+```java
+public class PushNotificationObserver implements OrderObserver {
+    @Override
+    public void onOrderShipped(Order order) {
+        System.out.println("[PUSH] Enviando notificación push para " + order.getId());
+        // Push notification logic here
+    }
+}
+```
+
+Then register it in `AppMain`:
+
+```java
+OrderObserver pushObserver = new PushNotificationObserver();
+publisher.addObserver(pushObserver);
+```
+
+<Tip>
+No changes to `OrderService`, `OrderEventPublisher`, or other observers are required!
+</Tip>
+
+### Adding New Events
+
+To track different order events, extend the interfaces:
+
+```java
+public interface OrderSubject {
+    void addObserver(OrderObserver observer);
+    void removeObserver(OrderObserver observer);
+    void notifyOrderShipped(Order order);
+    void notifyOrderCancelled(Order order); // New event
+}
+
+public interface OrderObserver {
+    void onOrderShipped(Order order);
+    void onOrderCancelled(Order order); // New handler
+}
+```
+
+<Info>
+This demonstrates how the Observer pattern provides a solid foundation for building event-driven systems that can evolve over time.
+</Info>

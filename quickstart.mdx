@@ -1,80 +1,177 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with the Observer pattern implementation in just a few minutes"
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide walks you through using the Observer pattern to handle order shipment notifications. You'll learn how to set up a subject (event publisher), register multiple observers, and trigger notifications automatically.
 
-### Step 1: Set up your local environment
+<Steps>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Step title="Create the Subject (Event Publisher)">
 
-### Step 2: Deploy your changes
+First, create an instance of `OrderEventPublisher`, which implements the `OrderSubject` interface. This object will manage all observers and notify them when events occur.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+```java
+OrderSubject publisher = new OrderEventPublisher();
+```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+The `OrderEventPublisher` maintains a list of observers and provides methods to add, remove, and notify them (OrderEventPublisher.java:8).
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+</Step>
 
-### Step 3: Go live
+<Step title="Create Observer Instances">
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Create instances of each observer that will react to order shipment events. This implementation includes three concrete observers:
 
-## Next steps
+```java
+OrderObserver emailObserver = new EmailOrderObserver();
+OrderObserver logObserver = new LogOrderObserver();
+OrderObserver statsObserver = new StatsOrderObserver();
+```
 
-Now that you have your docs running, explore these key features:
+Each observer implements the `OrderObserver` interface and defines its own `onOrderShipped()` behavior:
+- **EmailOrderObserver**: Sends notification emails to customers
+- **LogOrderObserver**: Logs order status changes
+- **StatsOrderObserver**: Tracks shipment statistics
 
-<CardGroup cols={2}>
+</Step>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+<Step title="Subscribe Observers to the Subject">
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+Register all observers with the subject so they'll be notified when events occur:
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+```java
+publisher.addObserver(emailObserver);
+publisher.addObserver(logObserver);
+publisher.addObserver(statsObserver);
+```
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+The order of subscription determines the notification order. Observers are stored in an ArrayList and notified sequentially (OrderEventPublisher.java:22-24).
 
-</CardGroup>
+</Step>
+
+<Step title="Create the Order Service">
+
+Initialize the `OrderService` with the subject. The service uses dependency injection to receive the subject:
+
+```java
+OrderService orderService = new OrderService(publisher);
+```
+
+This decouples the service from specific observer implementations, adhering to the Dependency Inversion Principle (OrderService.java:7-9).
+
+</Step>
+
+<Step title="Create and Ship an Order">
+
+Create a new order and trigger the shipment process:
+
+```java
+Order order = new Order("ORD-001");
+orderService.shipOrder(order);
+```
+
+When `shipOrder()` is called (OrderService.java:11-19):
+1. The order status is updated to "ENVIADO"
+2. A confirmation message is printed
+3. The subject's `notifyOrderShipped()` method is invoked
+4. All registered observers are notified in sequence
+5. Each observer executes its `onOrderShipped()` logic
+
+</Step>
+
+</Steps>
+
+## Complete Example
+
+Here's the full working example from `AppMain.java`:
+
+```java
+package patron_observer.marzo_2026_2;
+
+public class AppMain {
+
+    public static void main(String[] args) {
+
+        // 1) Crear el Subject (publisher de eventos)
+        OrderSubject publisher = new OrderEventPublisher();
+
+        // 2) Crear observers
+        OrderObserver emailObserver = new EmailOrderObserver();
+        OrderObserver logObserver = new LogOrderObserver();
+        OrderObserver statsObserver = new StatsOrderObserver();
+
+        // 3) Suscribir observers al subject
+        publisher.addObserver(emailObserver);
+        publisher.addObserver(logObserver);
+        publisher.addObserver(statsObserver);
+
+        // 4) Crear el servicio usando el subject
+        OrderService orderService = new OrderService(publisher);
+
+        // 5) Crear un pedido y enviarlo
+        Order order = new Order("ORD-001");
+        orderService.shipOrder(order); // esta función llama a cada observer
+
+    }
+}
+```
+
+## Expected Output
+
+When you run the application, you'll see the following console output:
+
+```
+OrderService: Pedido ORD-001 marcado como ENVIADO.
+[EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+[LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+[STATS] Contador de pedidos enviados: 1
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+The OrderService prints its message first, followed by each observer's notification in the order they were subscribed.
 </Note>
+
+## What Happens Under the Hood
+
+When `shipOrder()` is called:
+
+1. **Business Logic Execution** (OrderService.java:13-14)
+   - The order's status is changed from "CREADO" to "ENVIADO"
+   - A confirmation message is printed to the console
+
+2. **Event Notification** (OrderService.java:18)
+   - The service calls `orderSubject.notifyOrderShipped(order)`
+   - This delegates to `OrderEventPublisher.notifyOrderShipped()`
+
+3. **Observer Iteration** (OrderEventPublisher.java:22-24)
+   - The publisher iterates through its list of registered observers
+   - Each observer's `onOrderShipped()` method is invoked with the order
+
+4. **Observer Reactions**
+   - **EmailOrderObserver**: Prints email notification message (EmailOrderObserver.java:7)
+   - **LogOrderObserver**: Logs the order status change (LogOrderObserver.java:7)
+   - **StatsOrderObserver**: Increments internal counter and displays statistics (StatsOrderObserver.java:9-10)
+
+<Info>
+The Observer pattern decouples the OrderService from specific notification implementations. You can add or remove observers without modifying the service code.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Design Pattern" icon="book" href="/pattern/overview">
+    Learn the architecture and design principles
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/order-subject">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Custom Observers" icon="puzzle-piece" href="/examples/custom-observers">
+    Create your own custom observers
+  </Card>
+  <Card title="Extending the System" icon="plus" href="/examples/extending">
+    Add new functionality to the pattern
+  </Card>
+</CardGroup>

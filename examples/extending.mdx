@@ -1,0 +1,419 @@
+---
+title: Extending the System
+description: Learn how to extend the Observer pattern with new event types and functionality
+---
+
+This guide demonstrates how to extend the system with new event types while maintaining the flexibility and maintainability of the Observer pattern.
+
+## Adding a New Event Type
+
+Let's add support for order cancellation events. This requires modifications to several components but doesn't break existing functionality.
+
+<Steps>
+  <Step title="Update the OrderSubject Interface">
+    Add a new method to the `OrderSubject` interface to support the new event:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public interface OrderSubject {
+        void addObserver(OrderObserver observer);
+        void removeObserver(OrderObserver observer);
+        void notifyOrderShipped(Order order);
+        
+        // New method for order cancellation
+        void notifyOrderCancelled(Order order);
+    }
+    ```
+
+    <Warning>
+      Adding a method to an interface requires updating all implementing classes. This is a breaking change if you have multiple implementations.
+    </Warning>
+  </Step>
+
+  <Step title="Update the Observer Interface">
+    Add a corresponding method to the `OrderObserver` interface:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public interface OrderObserver {
+        void onOrderShipped(Order order);
+        
+        // New method for handling cancellation events
+        void onOrderCancelled(Order order);
+    }
+    ```
+
+    <Tip>
+      In Java 8+, you can use default methods to avoid breaking existing observers:
+
+      ```java
+      default void onOrderCancelled(Order order) {
+          // Default implementation does nothing
+      }
+      ```
+
+      This allows observers to opt-in to handling the new event.
+    </Tip>
+  </Step>
+
+  <Step title="Implement in OrderEventPublisher">
+    Update the publisher to notify observers of cancellation events:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    public class OrderEventPublisher implements OrderSubject {
+
+        private final List<OrderObserver> observers = new ArrayList<>();
+
+        @Override
+        public void addObserver(OrderObserver observer) {
+            observers.add(observer);
+        }
+
+        @Override
+        public void removeObserver(OrderObserver observer) {
+            observers.remove(observer);
+        }
+
+        @Override
+        public void notifyOrderShipped(Order order) {
+            for (OrderObserver observer : observers) {
+                observer.onOrderShipped(order);
+            }
+        }
+
+        @Override
+        public void notifyOrderCancelled(Order order) {
+            for (OrderObserver observer : observers) {
+                observer.onOrderCancelled(order);
+            }
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Update Existing Observers">
+    Update each observer to handle the new event. Here's how to update the existing observers:
+
+    **EmailOrderObserver:**
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class EmailOrderObserver implements OrderObserver {
+
+        @Override
+        public void onOrderShipped(Order order) {
+            System.out.println("[EMAIL] Pedido " + order.getId() + 
+                             " enviado. Mandando email al cliente.");
+        }
+
+        @Override
+        public void onOrderCancelled(Order order) {
+            System.out.println("[EMAIL] Pedido " + order.getId() + 
+                             " cancelado. Enviando notificación de cancelación.");
+        }
+    }
+    ```
+
+    **LogOrderObserver:**
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class LogOrderObserver implements OrderObserver {
+
+        @Override
+        public void onOrderShipped(Order order) {
+            System.out.println("[LOG] Pedido " + order.getId() + 
+                             " ha cambiado a estado: " + order.getStatus());
+        }
+
+        @Override
+        public void onOrderCancelled(Order order) {
+            System.out.println("[LOG] Pedido " + order.getId() + 
+                             " ha sido cancelado. Estado: " + order.getStatus());
+        }
+    }
+    ```
+
+    **StatsOrderObserver:**
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class StatsOrderObserver implements OrderObserver {
+
+        private int totalEnviados = 0;
+        private int totalCancelados = 0;
+
+        @Override
+        public void onOrderShipped(Order order) {
+            totalEnviados++;
+            System.out.println("[STATS] Contador de pedidos enviados: " + totalEnviados);
+        }
+
+        @Override
+        public void onOrderCancelled(Order order) {
+            totalCancelados++;
+            System.out.println("[STATS] Contador de pedidos cancelados: " + totalCancelados);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Add Business Logic to OrderService">
+    Create a new method in `OrderService` to handle order cancellation:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class OrderService {
+        private final OrderSubject orderSubject;
+
+        public OrderService(OrderSubject orderSubject) {
+            this.orderSubject = orderSubject;
+        }
+
+        public void shipOrder(Order order) {
+            order.setStatus("ENVIADO");
+            System.out.println("OrderService: Pedido " + order.getId() + 
+                             " marcado como ENVIADO.");
+            orderSubject.notifyOrderShipped(order);
+        }
+
+        public void cancelOrder(Order order) {
+            order.setStatus("CANCELADO");
+            System.out.println("OrderService: Pedido " + order.getId() + 
+                             " marcado como CANCELADO.");
+            orderSubject.notifyOrderCancelled(order);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Test the New Functionality">
+    Update your application to test both events:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class AppMain {
+
+        public static void main(String[] args) {
+
+            OrderSubject publisher = new OrderEventPublisher();
+
+            OrderObserver emailObserver = new EmailOrderObserver();
+            OrderObserver logObserver = new LogOrderObserver();
+            OrderObserver statsObserver = new StatsOrderObserver();
+
+            publisher.addObserver(emailObserver);
+            publisher.addObserver(logObserver);
+            publisher.addObserver(statsObserver);
+
+            OrderService orderService = new OrderService(publisher);
+
+            // Test shipping an order
+            Order order1 = new Order("ORD-001");
+            orderService.shipOrder(order1);
+
+            System.out.println("\n--- Cancelando un pedido ---\n");
+
+            // Test cancelling an order
+            Order order2 = new Order("ORD-002");
+            orderService.cancelOrder(order2);
+        }
+    }
+    ```
+
+    Expected output:
+    ```
+    OrderService: Pedido ORD-001 marcado como ENVIADO.
+    [EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+    [LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+    [STATS] Contador de pedidos enviados: 1
+
+    --- Cancelando un pedido ---
+
+    OrderService: Pedido ORD-002 marcado como CANCELADO.
+    [EMAIL] Pedido ORD-002 cancelado. Enviando notificación de cancelación.
+    [LOG] Pedido ORD-002 ha sido cancelado. Estado: CANCELADO
+    [STATS] Contador de pedidos cancelados: 1
+    ```
+  </Step>
+</Steps>
+
+## Alternative Approach: Event-Specific Observers
+
+Instead of adding methods to the existing observer interface, you can create separate observer interfaces for different event types:
+
+```java
+public interface OrderShippedObserver {
+    void onOrderShipped(Order order);
+}
+
+public interface OrderCancelledObserver {
+    void onOrderCancelled(Order order);
+}
+
+public interface OrderCreatedObserver {
+    void onOrderCreated(Order order);
+}
+```
+
+Then, observers can implement only the interfaces they care about:
+
+```java
+public class EmailObserver implements OrderShippedObserver, OrderCancelledObserver {
+    
+    @Override
+    public void onOrderShipped(Order order) {
+        // Send shipment email
+    }
+
+    @Override
+    public void onOrderCancelled(Order order) {
+        // Send cancellation email
+    }
+}
+
+public class AnalyticsObserver implements OrderCreatedObserver {
+    
+    @Override
+    public void onOrderCreated(Order order) {
+        // Track order creation in analytics
+    }
+}
+```
+
+<Tip>
+  This approach provides more flexibility and follows the Interface Segregation Principle. Observers only implement the events they need to handle.
+</Tip>
+
+## Adding Order States
+
+You can extend the system to support multiple order states:
+
+```java
+public enum OrderStatus {
+    CREATED,
+    PROCESSING,
+    SHIPPED,
+    DELIVERED,
+    CANCELLED,
+    REFUNDED
+}
+```
+
+Update the `Order` class to use the enum:
+
+```java
+package patron_observer.marzo_2026_2;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class Order {
+
+    private String id;
+    private OrderStatus status;
+
+    public Order(String id) {
+        this.id = id;
+        this.status = OrderStatus.CREATED;
+    }
+}
+```
+
+## Adding Observer Priorities
+
+You can extend the publisher to support observer priorities, ensuring certain observers are notified before others:
+
+```java
+public class PriorityOrderEventPublisher implements OrderSubject {
+
+    private final Map<OrderObserver, Integer> observerPriorities = new HashMap<>();
+
+    public void addObserver(OrderObserver observer, int priority) {
+        observerPriorities.put(observer, priority);
+    }
+
+    @Override
+    public void addObserver(OrderObserver observer) {
+        addObserver(observer, 0); // Default priority
+    }
+
+    @Override
+    public void notifyOrderShipped(Order order) {
+        observerPriorities.entrySet().stream()
+            .sorted(Map.Entry.<OrderObserver, Integer>comparingByValue().reversed())
+            .forEach(entry -> entry.getKey().onOrderShipped(order));
+    }
+
+    // Other methods...
+}
+```
+
+Usage:
+
+```java
+PriorityOrderEventPublisher publisher = new PriorityOrderEventPublisher();
+publisher.addObserver(auditObserver, 100);  // Highest priority
+publisher.addObserver(logObserver, 50);
+publisher.addObserver(emailObserver, 10);   // Lowest priority
+```
+
+<Warning>
+  Be cautious with observer priorities. If observers have dependencies on each other, it can create tight coupling and make the system harder to maintain.
+</Warning>
+
+## Conditional Observer Registration
+
+You can create a system that registers observers based on configuration:
+
+```java
+public class ObserverFactory {
+
+    public static void registerObservers(OrderSubject publisher, 
+                                        Map<String, Boolean> config) {
+        if (config.getOrDefault("email.enabled", false)) {
+            publisher.addObserver(new EmailOrderObserver());
+        }
+
+        if (config.getOrDefault("sms.enabled", false)) {
+            String phone = config.getOrDefault("sms.phone", "").toString();
+            publisher.addObserver(new SmsOrderObserver(phone));
+        }
+
+        if (config.getOrDefault("logging.enabled", true)) {
+            publisher.addObserver(new LogOrderObserver());
+        }
+
+        if (config.getOrDefault("stats.enabled", true)) {
+            publisher.addObserver(new StatsOrderObserver());
+        }
+    }
+}
+```
+
+<Info>
+  This pattern allows you to enable or disable observers through configuration files or environment variables without changing code.
+</Info>
+
+## Key Takeaways
+
+1. **Plan for Extension**: When designing the initial interfaces, consider what events might be added in the future.
+2. **Use Default Methods**: Java 8+ default methods can help maintain backward compatibility.
+3. **Separate Interfaces**: Consider using event-specific observer interfaces for maximum flexibility.
+4. **Document Changes**: When adding new events, update documentation to help other developers understand the system.
+5. **Test Thoroughly**: Ensure that adding new functionality doesn't break existing observers.
+
+<Tip>
+  The Observer pattern shines when you need to extend functionality. Each new feature can be added as a new observer without modifying existing code, following the Open/Closed Principle.
+</Tip>

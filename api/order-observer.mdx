@@ -1,0 +1,64 @@
+---
+title: "OrderObserver"
+description: "Observer interface for receiving order shipping notifications"
+---
+
+## Overview
+
+The `OrderObserver` interface defines the contract for observers in the Observer pattern. Implementations of this interface receive notifications when an order is shipped.
+
+## Interface Definition
+
+```java
+package patron_observer.marzo_2026_2;
+
+//observer
+public interface OrderObserver {
+    void onOrderShipped(Order order);
+}
+```
+
+## Methods
+
+### onOrderShipped()
+
+Called when an order has been shipped. Implementations should define what action to take when this event occurs.
+
+<ParamField path="order" type="Order" required>
+  The order that has been shipped, containing order ID and status information
+</ParamField>
+
+## When It's Called
+
+This method is invoked by the `OrderSubject` (typically `OrderEventPublisher`) when:
+
+1. An `OrderService` calls `shipOrder()` on an order
+2. The order status changes to "ENVIADO" (shipped)
+3. The `OrderSubject.notifyOrderShipped()` method is triggered
+4. All registered observers receive the notification
+
+## Example Implementation
+
+Here's a simple example of implementing the `OrderObserver` interface:
+
+```java
+public class CustomOrderObserver implements OrderObserver {
+    
+    @Override
+    public void onOrderShipped(Order order) {
+        // Custom logic when order is shipped
+        System.out.println("Custom notification for order: " + order.getId());
+        // Could send SMS, update database, trigger webhooks, etc.
+    }
+}
+```
+
+## Built-in Implementations
+
+The system provides three pre-built observer implementations:
+
+- [EmailOrderObserver](/api/observers#email) - Sends email notifications
+- [LogOrderObserver](/api/observers#log) - Logs order status changes
+- [StatsOrderObserver](/api/observers#stats) - Tracks shipping statistics
+
+See [Observers](/api/observers) for complete details on each implementation.

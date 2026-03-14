@@ -1,0 +1,71 @@
+---
+title: "OrderSubject"
+description: "Subject interface for the Observer pattern that manages order event subscriptions"
+---
+
+## Overview
+
+The `OrderSubject` interface defines the contract for the Subject role in the Observer pattern. It manages a list of observers and notifies them when an order is shipped.
+
+## Interface Definition
+
+```java
+package patron_observer.marzo_2026_2;
+
+// subject
+
+public interface OrderSubject {
+    void addObserver(OrderObserver observer);
+    void removeObserver(OrderObserver observer);
+    void notifyOrderShipped(Order order);
+}
+```
+
+## Methods
+
+### addObserver()
+
+Registers an observer to receive order shipping notifications.
+
+<ParamField path="observer" type="OrderObserver" required>
+  The observer instance to add to the notification list
+</ParamField>
+
+### removeObserver()
+
+Unregisters an observer from receiving order shipping notifications.
+
+<ParamField path="observer" type="OrderObserver" required>
+  The observer instance to remove from the notification list
+</ParamField>
+
+### notifyOrderShipped()
+
+Notifies all registered observers that an order has been shipped.
+
+<ParamField path="order" type="Order" required>
+  The order that has been shipped
+</ParamField>
+
+## Usage Example
+
+```java
+// Create the subject implementation
+OrderSubject publisher = new OrderEventPublisher();
+
+// Add observers
+publisher.addObserver(new EmailOrderObserver());
+publisher.addObserver(new LogOrderObserver());
+publisher.addObserver(new StatsOrderObserver());
+
+// Create and ship an order
+Order order = new Order("ORD-001");
+order.setStatus("ENVIADO");
+
+// Notify all observers
+publisher.notifyOrderShipped(order);
+```
+
+## Implementation
+
+See [OrderEventPublisher](/api/order-event-publisher) for the concrete implementation of this interface.

@@ -1,0 +1,116 @@
+---
+title: "OrderEventPublisher"
+description: "Concrete implementation of OrderSubject that manages and notifies order observers"
+---
+
+## Overview
+
+The `OrderEventPublisher` class is the concrete implementation of the `OrderSubject` interface. It maintains a list of observers and notifies them when order shipping events occur.
+
+## Class Definition
+
+```java
+package patron_observer.marzo_2026_2;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class OrderEventPublisher implements OrderSubject {
+
+    private final List<OrderObserver> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(OrderObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(OrderObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyOrderShipped(Order order) {
+        for (OrderObserver observer : observers) {
+            observer.onOrderShipped(order);
+        }
+    }
+}
+```
+
+## How It Works
+
+The `OrderEventPublisher` implements the Subject role in the Observer pattern:
+
+1. **Maintains Observer List**: Uses an `ArrayList` to store all registered observers
+2. **Registration**: Allows observers to subscribe via `addObserver()`
+3. **Unregistration**: Allows observers to unsubscribe via `removeObserver()`
+4. **Notification**: Iterates through all observers and calls their `onOrderShipped()` method
+
+## Fields
+
+### observers
+
+```java
+private final List<OrderObserver> observers = new ArrayList<>();
+```
+
+A list that holds all registered observer instances. It's marked as `final` to prevent reassignment, but the list contents can be modified through the add/remove methods.
+
+## Methods
+
+### addObserver()
+
+Adds an observer to the notification list.
+
+<ParamField path="observer" type="OrderObserver" required>
+  The observer instance to register for notifications
+</ParamField>
+
+### removeObserver()
+
+Removes an observer from the notification list.
+
+<ParamField path="observer" type="OrderObserver" required>
+  The observer instance to unregister from notifications
+</ParamField>
+
+### notifyOrderShipped()
+
+Notifies all registered observers that an order has been shipped by calling each observer's `onOrderShipped()` method.
+
+<ParamField path="order" type="Order" required>
+  The order that has been shipped
+</ParamField>
+
+## Usage Example
+
+```java
+// Create the publisher
+OrderEventPublisher publisher = new OrderEventPublisher();
+
+// Register multiple observers
+EmailOrderObserver emailObserver = new EmailOrderObserver();
+LogOrderObserver logObserver = new LogOrderObserver();
+StatsOrderObserver statsObserver = new StatsOrderObserver();
+
+publisher.addObserver(emailObserver);
+publisher.addObserver(logObserver);
+publisher.addObserver(statsObserver);
+
+// Use with OrderService
+OrderService orderService = new OrderService(publisher);
+
+// Ship an order - all observers will be notified
+Order order = new Order("ORD-001");
+orderService.shipOrder(order);
+
+// Optionally remove an observer
+publisher.removeObserver(emailObserver);
+```
+
+## Related
+
+- [OrderSubject](/api/order-subject) - The interface this class implements
+- [OrderObserver](/api/order-observer) - The observer interface
+- [OrderService](/api/order-service) - Uses the publisher to notify observers

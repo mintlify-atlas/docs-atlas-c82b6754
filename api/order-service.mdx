@@ -1,0 +1,109 @@
+---
+title: "OrderService"
+description: "Service class that handles order shipping business logic and triggers observer notifications"
+---
+
+## Overview
+
+The `OrderService` class encapsulates the business logic for shipping orders. It uses the `OrderSubject` interface to notify observers when an order is shipped, demonstrating the Observer pattern in action.
+
+## Class Definition
+
+```java
+package patron_observer.marzo_2026_2;
+
+public class OrderService {
+    //interface de subject:
+    private final OrderSubject orderSubject;
+
+    public OrderService(OrderSubject orderSubject) {
+        this.orderSubject = orderSubject;
+    }
+
+    public void shipOrder(Order order) {
+        // lógica de negocio para "enviar" el pedido
+        order.setStatus("ENVIADO");
+        System.out.println("OrderService: Pedido " + order.getId() + " marcado como ENVIADO.");
+
+
+        // se llama a la función de cada observer(Mail, Log, Stats) o sea 3 llamados:
+        orderSubject.notifyOrderShipped(order);
+    }
+}
+```
+
+## How It Works
+
+The `OrderService` follows these steps when shipping an order:
+
+1. Updates the order status to "ENVIADO" (shipped)
+2. Logs the status change to the console
+3. Notifies all registered observers through the `OrderSubject`
+4. Each observer (Email, Log, Stats) receives the notification and performs its action
+
+## Constructor
+
+### OrderService(OrderSubject orderSubject)
+
+Creates a new `OrderService` instance with dependency injection.
+
+<ParamField path="orderSubject" type="OrderSubject" required>
+  The subject implementation that will manage observer notifications. Typically an instance of `OrderEventPublisher`.
+</ParamField>
+
+## Methods
+
+### shipOrder()
+
+Processes the order shipment by updating the order status and notifying all observers.
+
+<ParamField path="order" type="Order" required>
+  The order to be shipped. Must have a valid ID.
+</ParamField>
+
+**What It Does:**
+- Sets the order status to "ENVIADO"
+- Logs the shipment action
+- Triggers observer notifications via `orderSubject.notifyOrderShipped()`
+
+## Usage Example
+
+```java
+// Setup: Create publisher and register observers
+OrderEventPublisher publisher = new OrderEventPublisher();
+publisher.addObserver(new EmailOrderObserver());
+publisher.addObserver(new LogOrderObserver());
+publisher.addObserver(new StatsOrderObserver());
+
+// Create the service with the publisher
+OrderService orderService = new OrderService(publisher);
+
+// Create and ship an order
+Order order = new Order("ORD-001");
+orderService.shipOrder(order);
+```
+
+### Console Output
+
+```
+OrderService: Pedido ORD-001 marcado como ENVIADO.
+[EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+[LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+[STATS] Contador de pedidos enviados: 1
+```
+
+## Design Pattern Benefits
+
+By using the `OrderSubject` interface:
+
+- **Loose Coupling**: `OrderService` doesn't need to know about specific observer implementations
+- **Extensibility**: New observers can be added without modifying `OrderService`
+- **Single Responsibility**: Business logic is separated from notification logic
+- **Flexibility**: Observers can be added or removed at runtime
+
+## Related
+
+- [OrderSubject](/api/order-subject) - The interface used to notify observers
+- [OrderEventPublisher](/api/order-event-publisher) - The typical subject implementation passed to the constructor
+- [Order](/api/order) - The order model that gets shipped
+- [Observers](/api/observers) - The observer implementations that get notified

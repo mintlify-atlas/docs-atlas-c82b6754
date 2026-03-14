@@ -1,0 +1,193 @@
+---
+title: "Observer Implementations"
+description: "Built-in observer implementations for handling order shipping events"
+---
+
+## Overview
+
+The system provides three concrete implementations of the `OrderObserver` interface, each handling order shipping notifications differently:
+
+- **EmailOrderObserver** - Sends email notifications to customers
+- **LogOrderObserver** - Logs order status changes
+- **StatsOrderObserver** - Tracks shipping statistics
+
+<Tabs>
+  <Tab title="EmailOrderObserver">
+    ## EmailOrderObserver
+
+    Sends email notifications to customers when their order is shipped.
+
+    ### Class Definition
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class EmailOrderObserver implements OrderObserver {
+
+        @Override
+        public void onOrderShipped(Order order) {
+            System.out.println("[EMAIL] Pedido " + order.getId() + " enviado. Mandando email al cliente.");
+        }
+    }
+    ```
+
+    ### What It Does
+
+    When an order is shipped, this observer:
+    - Receives the order shipping notification
+    - Prepares to send an email to the customer
+    - Logs the email sending action to the console
+
+    ### Console Output
+
+    ```
+    [EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+    ```
+
+    ### Usage Example
+
+    ```java
+    OrderSubject publisher = new OrderEventPublisher();
+    publisher.addObserver(new EmailOrderObserver());
+
+    Order order = new Order("ORD-001");
+    publisher.notifyOrderShipped(order);
+    // Output: [EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+    ```
+  </Tab>
+
+  <Tab title="LogOrderObserver">
+    ## LogOrderObserver
+
+    Logs order status changes to the system log for audit and debugging purposes.
+
+    ### Class Definition
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class LogOrderObserver implements OrderObserver {
+
+        @Override
+        public void onOrderShipped(Order order) {
+            System.out.println("[LOG] Pedido " + order.getId() + " ha cambiado a estado: " + order.getStatus());
+        }
+    }
+    ```
+
+    ### What It Does
+
+    When an order is shipped, this observer:
+    - Receives the order shipping notification
+    - Logs the order ID and its new status
+    - Records the state change for audit trails
+
+    ### Console Output
+
+    ```
+    [LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+    ```
+
+    ### Usage Example
+
+    ```java
+    OrderSubject publisher = new OrderEventPublisher();
+    publisher.addObserver(new LogOrderObserver());
+
+    Order order = new Order("ORD-001");
+    order.setStatus("ENVIADO");
+    publisher.notifyOrderShipped(order);
+    // Output: [LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+    ```
+  </Tab>
+
+  <Tab title="StatsOrderObserver">
+    ## StatsOrderObserver
+
+    Tracks statistics about shipped orders, maintaining a counter of total shipments.
+
+    ### Class Definition
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class StatsOrderObserver implements OrderObserver {
+
+        private int totalEnviados = 0;
+
+        @Override
+        public void onOrderShipped(Order order) {
+            totalEnviados++;
+            System.out.println("[STATS] Contador de pedidos enviados: " + totalEnviados);
+        }
+    }
+    ```
+
+    ### What It Does
+
+    When an order is shipped, this observer:
+    - Increments the internal counter of shipped orders
+    - Displays the updated total count
+    - Maintains stateful information across multiple notifications
+
+    ### Console Output
+
+    ```
+    [STATS] Contador de pedidos enviados: 1
+    [STATS] Contador de pedidos enviados: 2
+    [STATS] Contador de pedidos enviados: 3
+    ```
+
+    ### Usage Example
+
+    ```java
+    OrderSubject publisher = new OrderEventPublisher();
+    StatsOrderObserver statsObserver = new StatsOrderObserver();
+    publisher.addObserver(statsObserver);
+
+    Order order1 = new Order("ORD-001");
+    publisher.notifyOrderShipped(order1);
+    // Output: [STATS] Contador de pedidos enviados: 1
+
+    Order order2 = new Order("ORD-002");
+    publisher.notifyOrderShipped(order2);
+    // Output: [STATS] Contador de pedidos enviados: 2
+    ```
+
+    ### State Management
+
+    Unlike the other observers, `StatsOrderObserver` maintains internal state (`totalEnviados`). Each instance tracks its own count independently.
+  </Tab>
+</Tabs>
+
+## Using Multiple Observers
+
+All three observers can work together simultaneously:
+
+```java
+OrderEventPublisher publisher = new OrderEventPublisher();
+
+// Register all three observers
+publisher.addObserver(new EmailOrderObserver());
+publisher.addObserver(new LogOrderObserver());
+publisher.addObserver(new StatsOrderObserver());
+
+// Ship an order
+OrderService service = new OrderService(publisher);
+Order order = new Order("ORD-001");
+service.shipOrder(order);
+```
+
+### Combined Output
+
+```
+OrderService: Pedido ORD-001 marcado como ENVIADO.
+[EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+[LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+[STATS] Contador de pedidos enviados: 1
+```
+
+## Related
+
+- [OrderObserver](/api/order-observer) - The interface these classes implement
+- [OrderEventPublisher](/api/order-event-publisher) - Manages observer registration and notification

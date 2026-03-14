@@ -1,0 +1,246 @@
+---
+title: Creating Custom Observers
+description: Learn how to create your own custom observers to extend the system's functionality
+---
+
+This guide shows you how to create custom observers to add new functionality to the order notification system without modifying existing code.
+
+## Creating an SMS Notification Observer
+
+Let's create a new observer that sends SMS notifications when orders are shipped. This example demonstrates the extensibility of the Observer pattern.
+
+<Steps>
+  <Step title="Create the Observer Class">
+    Create a new class that implements the `OrderObserver` interface:
+
+    ```java
+    package patron_observer.marzo_2026_2;
+
+    public class SmsOrderObserver implements OrderObserver {
+
+        private String phoneNumber;
+
+        public SmsOrderObserver(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+        }
+
+        @Override
+        public void onOrderShipped(Order order) {
+            sendSms(order);
+        }
+
+        private void sendSms(Order order) {
+            System.out.println("[SMS] Enviando SMS a " + phoneNumber + 
+                             ": Su pedido " + order.getId() + 
+                             " ha sido enviado.");
+            // In production, integrate with Twilio, AWS SNS, or similar
+        }
+    }
+    ```
+
+    The observer stores a phone number and uses it when sending notifications.
+  </Step>
+
+  <Step title="Register the Observer">
+    Add your new observer to the application by registering it with the publisher:
+
+    ```java
+    public class AppMain {
+
+        public static void main(String[] args) {
+
+            OrderSubject publisher = new OrderEventPublisher();
+
+            // Create existing observers
+            OrderObserver emailObserver = new EmailOrderObserver();
+            OrderObserver logObserver = new LogOrderObserver();
+            OrderObserver statsObserver = new StatsOrderObserver();
+            
+            // Create your custom SMS observer
+            OrderObserver smsObserver = new SmsOrderObserver("+1-555-0123");
+
+            // Register all observers
+            publisher.addObserver(emailObserver);
+            publisher.addObserver(logObserver);
+            publisher.addObserver(statsObserver);
+            publisher.addObserver(smsObserver);  // Add the new observer
+
+            OrderService orderService = new OrderService(publisher);
+
+            Order order = new Order("ORD-001");
+            orderService.shipOrder(order);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Test the Integration">
+    Run the application and verify that your SMS observer is called:
+
+    ```
+    OrderService: Pedido ORD-001 marcado como ENVIADO.
+    [EMAIL] Pedido ORD-001 enviado. Mandando email al cliente.
+    [LOG] Pedido ORD-001 ha cambiado a estado: ENVIADO
+    [STATS] Contador de pedidos enviados: 1
+    [SMS] Enviando SMS a +1-555-0123: Su pedido ORD-001 ha sido enviado.
+    ```
+
+    Notice that all observers, including the new SMS observer, are notified automatically.
+  </Step>
+</Steps>
+
+## Creating a Push Notification Observer
+
+Here's another example that sends push notifications to a mobile app:
+
+```java
+package patron_observer.marzo_2026_2;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class PushNotificationObserver implements OrderObserver {
+
+    private String deviceToken;
+    private Map<String, Integer> notificationCount;
+
+    public PushNotificationObserver(String deviceToken) {
+        this.deviceToken = deviceToken;
+        this.notificationCount = new HashMap<>();
+    }
+
+    @Override
+    public void onOrderShipped(Order order) {
+        sendPushNotification(order);
+        trackNotification(order);
+    }
+
+    private void sendPushNotification(Order order) {
+        System.out.println("[PUSH] Enviando notificación push al dispositivo " + 
+                         deviceToken + ": Pedido " + order.getId() + " enviado");
+        // In production, integrate with Firebase Cloud Messaging, 
+        // Apple Push Notification Service, or similar
+    }
+
+    private void trackNotification(Order order) {
+        notificationCount.put(order.getId(), 
+                            notificationCount.getOrDefault(order.getId(), 0) + 1);
+        System.out.println("[PUSH] Total de notificaciones enviadas para " + 
+                         order.getId() + ": " + notificationCount.get(order.getId()));
+    }
+}
+```
+
+### Using the Push Notification Observer
+
+```java
+// Create and register the push notification observer
+OrderObserver pushObserver = new PushNotificationObserver("device-token-12345");
+publisher.addObserver(pushObserver);
+```
+
+## Creating a Database Audit Observer
+
+This observer saves order state changes to a database for audit purposes:
+
+```java
+package patron_observer.marzo_2026_2;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+public class AuditOrderObserver implements OrderObserver {
+
+    private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    @Override
+    public void onOrderShipped(Order order) {
+        auditOrderShipment(order);
+    }
+
+    private void auditOrderShipment(Order order) {
+        String timestamp = LocalDateTime.now().format(formatter);
+        String auditEntry = String.format(
+            "[AUDIT] %s - Order %s changed to status: %s",
+            timestamp,
+            order.getId(),
+            order.getStatus()
+        );
+        
+        System.out.println(auditEntry);
+        // In production:
+        // - Save to database table (audit_log)
+        // - Include user ID, IP address, and other metadata
+        // - Use prepared statements to prevent SQL injection
+    }
+}
+```
+
+## Best Practices for Custom Observers
+
+<Tip>
+  Keep observers focused on a single responsibility. If an observer is doing too much, consider splitting it into multiple observers.
+</Tip>
+
+<Warning>
+  Observers should not throw uncaught exceptions. If an observer fails, it can prevent other observers from being notified. Always handle exceptions within the observer:
+
+  ```java
+  @Override
+  public void onOrderShipped(Order order) {
+      try {
+          sendSms(order);
+      } catch (Exception e) {
+          System.err.println("[SMS] Error sending notification: " + e.getMessage());
+          // Log the error but don't propagate it
+      }
+  }
+  ```
+</Warning>
+
+<Info>
+  If observers need to perform long-running operations (like API calls), consider executing them asynchronously to avoid blocking other observers.
+</Info>
+
+## Observer Configuration
+
+You can make observers configurable by accepting parameters:
+
+```java
+public class ConfigurableEmailObserver implements OrderObserver {
+
+    private String emailTemplate;
+    private boolean sendImmediately;
+
+    public ConfigurableEmailObserver(String emailTemplate, boolean sendImmediately) {
+        this.emailTemplate = emailTemplate;
+        this.sendImmediately = sendImmediately;
+    }
+
+    @Override
+    public void onOrderShipped(Order order) {
+        if (sendImmediately) {
+            sendEmail(order, emailTemplate);
+        } else {
+            queueEmail(order, emailTemplate);
+        }
+    }
+
+    private void sendEmail(Order order, String template) {
+        System.out.println("[EMAIL] Enviando email inmediato con template: " + template);
+    }
+
+    private void queueEmail(Order order, String template) {
+        System.out.println("[EMAIL] Email encolado con template: " + template);
+    }
+}
+```
+
+This allows you to create different instances with different configurations:
+
+```java
+OrderObserver urgentEmailObserver = 
+    new ConfigurableEmailObserver("urgent-shipment", true);
+OrderObserver batchEmailObserver = 
+    new ConfigurableEmailObserver("standard-shipment", false);
+```

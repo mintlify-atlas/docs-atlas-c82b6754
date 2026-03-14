@@ -1,0 +1,123 @@
+---
+title: "Order"
+description: "Domain model representing an order in the system"
+---
+
+## Overview
+
+The `Order` class is the domain model that represents an order in the system. It contains the order's unique identifier and current status, and uses Lombok annotations to generate getters and setters.
+
+## Class Definition
+
+```java
+package patron_observer.marzo_2026_2;
+
+import lombok.Getter;
+import lombok.Setter;
+
+//modelo de dominio
+@Getter
+@Setter
+public class Order {
+
+    private String id;
+    private String status; // "CREADO", "ENVIADO", etc.
+
+    public Order(String id) {
+        this.id = id;
+        this.status = "CREADO";
+    }
+
+}
+```
+
+## Fields
+
+### id
+
+```java
+private String id;
+```
+
+The unique identifier for the order. Set during construction and can be retrieved via `getId()`.
+
+### status
+
+```java
+private String status; // "CREADO", "ENVIADO", etc.
+```
+
+The current status of the order. Common values:
+- `"CREADO"` - Initial status when order is created
+- `"ENVIADO"` - Status after order has been shipped
+
+The status can be updated using `setStatus()` and retrieved using `getStatus()`.
+
+## Constructor
+
+### Order(String id)
+
+Creates a new order with the specified ID and initializes its status to "CREADO".
+
+<ParamField path="id" type="String" required>
+  The unique identifier for the order (e.g., "ORD-001")
+</ParamField>
+
+## Lombok Annotations
+
+The class uses Lombok annotations to reduce boilerplate code:
+
+### @Getter
+
+Automatically generates getter methods:
+- `String getId()`
+- `String getStatus()`
+
+### @Setter
+
+Automatically generates setter methods:
+- `void setId(String id)`
+- `void setStatus(String status)`
+
+## Usage Example
+
+### Creating an Order
+
+```java
+// Create a new order
+Order order = new Order("ORD-001");
+System.out.println(order.getId());     // Output: ORD-001
+System.out.println(order.getStatus()); // Output: CREADO
+```
+
+### Updating Order Status
+
+```java
+Order order = new Order("ORD-001");
+
+// Update the status
+order.setStatus("ENVIADO");
+System.out.println(order.getStatus()); // Output: ENVIADO
+```
+
+### Using with OrderService
+
+```java
+// Setup
+OrderEventPublisher publisher = new OrderEventPublisher();
+publisher.addObserver(new LogOrderObserver());
+OrderService service = new OrderService(publisher);
+
+// Create and ship order
+Order order = new Order("ORD-001");
+service.shipOrder(order);
+
+// Order status is now "ENVIADO"
+System.out.println(order.getStatus()); // Output: ENVIADO
+```
+
+## Related
+
+- [OrderService](/api/order-service) - Service that processes order shipments
+- [OrderObserver](/api/order-observer) - Receives order objects in notifications
+- [Observers](/api/observers) - Implementations that handle order events

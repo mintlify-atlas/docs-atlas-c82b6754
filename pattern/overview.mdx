@@ -1,0 +1,126 @@
+---
+title: "Observer Pattern Overview"
+description: "Understanding the Observer pattern and its application in the e-commerce order system"
+---
+
+## What is the Observer Pattern?
+
+The Observer pattern is a behavioral design pattern that defines a **one-to-many dependency** between objects. When one object (the Subject) changes state, all its dependents (Observers) are automatically notified and updated.
+
+<Note>
+The Observer pattern is also known as the **Publish-Subscribe pattern** or **Event Listener pattern**.
+</Note>
+
+## The Problem It Solves
+
+In our e-commerce order system, whenever an order changes to the "ENVIADO" (SHIPPED) status, several actions must occur:
+
+- Send an email to the customer with the tracking number
+- Register the event in an audit log
+- Notify a statistics module to increment a "orders shipped today" counter
+
+### The Challenge
+
+Without the Observer pattern, the `OrderService` class would need to:
+
+```java
+public void shipOrder(Order order) {
+    order.setStatus("ENVIADO");
+    
+    // Tightly coupled to all actions
+    emailService.sendTrackingEmail(order);
+    auditLogger.logShipment(order);
+    statsModule.incrementShippedCounter();
+}
+```
+
+<Info>
+This approach violates the **Single Responsibility Principle** and makes the code difficult to maintain and extend.
+</Info>
+
+### The Requirements
+
+The solution must satisfy these constraints:
+
+1. **Decoupling**: `OrderService` should not know the details of how emails are sent, logs are recorded, or statistics are updated
+2. **Extensibility**: New actions (like push notifications) should be easy to add without modifying `OrderService`
+3. **Maintainability**: Each action should be isolated in its own class
+
+## Why Use Observer Pattern Here?
+
+The Observer pattern is ideal for this scenario because:
+
+### 1. Decoupling
+
+The `OrderService` doesn't need to know about specific observers. It only interacts with the `OrderSubject` interface:
+
+```java
+public class OrderService {
+    private final OrderSubject orderSubject;
+    
+    public void shipOrder(Order order) {
+        order.setStatus("ENVIADO");
+        orderSubject.notifyOrderShipped(order); // Notify all observers
+    }
+}
+```
+
+### 2. Extensibility
+
+Adding new functionality is as simple as creating a new observer class:
+
+```java
+public class PushNotificationObserver implements OrderObserver {
+    @Override
+    public void onOrderShipped(Order order) {
+        // Send push notification
+    }
+}
+```
+
+No changes to `OrderService` are required!
+
+### 3. Maintainability
+
+Each action is encapsulated in its own observer class:
+
+- `EmailOrderObserver` - Handles email notifications
+- `LogOrderObserver` - Handles audit logging
+- `StatsOrderObserver` - Handles statistics tracking
+
+<Tip>
+Each observer can be tested, modified, or removed independently without affecting others.
+</Tip>
+
+## Key Benefits
+
+<CardGroup cols={2}>
+  <Card title="Loose Coupling" icon="link-slash">
+    The subject and observers are loosely coupled. They interact through interfaces, not concrete implementations.
+  </Card>
+  
+  <Card title="Open/Closed Principle" icon="door-open">
+    Open for extension (add new observers), closed for modification (no changes to existing code).
+  </Card>
+  
+  <Card title="Dynamic Relationships" icon="shuffle">
+    Observers can be added or removed at runtime without affecting the subject.
+  </Card>
+  
+  <Card title="Single Responsibility" icon="bullseye">
+    Each observer has one clear responsibility, making the code easier to understand and maintain.
+  </Card>
+</CardGroup>
+
+## Pattern Structure
+
+The Observer pattern in this project consists of:
+
+1. **Subject Interface** (`OrderSubject`) - Defines methods to manage observers
+2. **Concrete Subject** (`OrderEventPublisher`) - Maintains the list of observers and notifies them
+3. **Observer Interface** (`OrderObserver`) - Defines the update method all observers must implement
+4. **Concrete Observers** (`EmailOrderObserver`, `LogOrderObserver`, `StatsOrderObserver`) - React to notifications
+
+<Note>
+The `OrderService` acts as a client that triggers the notification process when business logic dictates an order has been shipped.
+</Note>

@@ -1,0 +1,66 @@
+{
+  "projectType": "general",
+  "projectName": "Patron Observer Java",
+  "projectDescription": "A Java implementation of the Observer design pattern for order event notification in an e-commerce system.",
+  "theme": "mint",
+  "primaryColor": "#2563eb",
+  "lightColor": "#60a5fa",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Design Pattern",
+        "pages": [
+          "pattern/overview",
+          "pattern/architecture",
+          "pattern/components"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api/order-subject",
+          "api/order-observer",
+          "api/order-event-publisher",
+          "api/observers",
+          "api/order-service",
+          "api/order"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/basic-usage",
+          "examples/custom-observers",
+          "examples/extending"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Observer pattern implementation for order events",
+    "Decoupled event notification system",
+    "Multiple observer types (Email, Log, Statistics)",
+    "Extensible observer registration",
+    "Clean separation of concerns"
+  ],
+  "publicApiSurface": [
+    "OrderSubject.addObserver()",
+    "OrderSubject.removeObserver()",
+    "OrderSubject.notifyOrderShipped()",
+    "OrderObserver.onOrderShipped()",
+    "OrderService.shipOrder()",
+    "EmailOrderObserver",
+    "LogOrderObserver",
+    "StatsOrderObserver",
+    "OrderEventPublisher",
+    "Order"
+  ]
+}
